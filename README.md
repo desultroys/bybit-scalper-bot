@@ -1,3 +1,12 @@
+# 🤖 Crypto Scalping Bot — Bybit / BingX / Binance
+
+> **Looking for a custom trading bot?** I build bots tailored to your strategy.
+> 📩 Contact via [Fiverr](https://www.fiverr.com/desultroys) | [GitHub Issues](https://github.com/desultroys/bybit-scalper-bot/issues)
+
+**Features:** RSI · EMA · ATR · VWAP · Order Book · ML Optimizer · Backtesting · Liquidation Clusters
+
+---
+
 # 🤖 Bybit USDT Perpetual Scalping Bot
 
 > ⚠️ **UYARI**: Bu bot gerçek para kullanır. Kripto futures trading yüksek risk içerir.  
