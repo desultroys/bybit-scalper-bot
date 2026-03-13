@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python backtest.py --days 90)",
+      "Bash(python -c \":*)",
+      "Bash(python -m pip install anthropic python-dotenv -q)",
+      "Bash(python ai_trader.py --dry-run --once)"
+    ]
+  }
+}

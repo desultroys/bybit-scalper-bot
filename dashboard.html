@@ -1,0 +1,1716 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BingX Scalper Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #080c10;
+    --bg2:      #0d1117;
+    --bg3:      #111820;
+    --border:   #1e2d3d;
+    --border2:  #2a3f54;
+    --green:    #00ff9d;
+    --green2:   #00c97a;
+    --red:      #ff3b5c;
+    --red2:     #cc2244;
+    --yellow:   #ffd94a;
+    --blue:     #3b9eff;
+    --blue2:    #1a6fd4;
+    --text:     #c8d8e8;
+    --text2:    #6b8299;
+    --text3:    #3a5068;
+    --mono:     'Space Mono', monospace;
+    --sans:     'Syne', sans-serif;
+    --glow-g:   0 0 20px rgba(0,255,157,0.15);
+    --glow-r:   0 0 20px rgba(255,59,92,0.15);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* ── Scanline overlay ─────────────────────────────────── */
+  body::before {
+    content:'';
+    position:fixed;
+    inset:0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events:none;
+    z-index:9999;
+  }
+
+  /* ── Header ───────────────────────────────────────────── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    font-family: var(--sans);
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: #fff;
+  }
+  .logo span { color: var(--green); }
+  .header-status {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--text3);
+    box-shadow: none;
+    transition: all 0.3s;
+    display: inline-block;
+    margin-right: 6px;
+  }
+  .status-dot.active {
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; } 50% { opacity:0.5; }
+  }
+  .network-badge {
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 2px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+  .network-badge.testnet { background: rgba(255,217,74,0.15); color: var(--yellow); border: 1px solid rgba(255,217,74,0.3); }
+  .network-badge.mainnet { background: rgba(255,59,92,0.15); color: var(--red); border: 1px solid rgba(255,59,92,0.3); }
+
+  /* ── Tabs ─────────────────────────────────────────────── */
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    padding: 0 24px;
+  }
+  .tab {
+    padding: 10px 18px;
+    cursor: pointer;
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text2);
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    font-family: var(--sans);
+    font-weight: 700;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--green); border-bottom-color: var(--green); }
+
+  /* ── Layout ───────────────────────────────────────────── */
+  .page { display:none; padding:20px 24px; }
+  .page.active { display:block; }
+
+  .grid-4 { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:16px; }
+  .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px; }
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px; }
+  .grid-main { display:grid; grid-template-columns:1fr 380px; gap:12px; }
+
+  /* ── Cards ────────────────────────────────────────────── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+  .card::before {
+    content:'';
+    position:absolute;
+    top:0; left:0; right:0;
+    height:1px;
+    background: linear-gradient(90deg, transparent, var(--border2), transparent);
+  }
+  .card-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 8px;
+    font-family: var(--sans);
+    font-weight: 700;
+  }
+  .card-value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #fff;
+    font-family: var(--sans);
+    line-height: 1;
+  }
+  .card-value.green { color: var(--green); }
+  .card-value.red   { color: var(--red); }
+  .card-value.yellow { color: var(--yellow); }
+  .card-sub {
+    font-size: 10px;
+    color: var(--text2);
+    margin-top: 4px;
+  }
+  .card-sub.green { color: var(--green2); }
+  .card-sub.red   { color: var(--red2); }
+
+  /* ── Stat rows ────────────────────────────────────────── */
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-key { color: var(--text2); font-size: 11px; }
+  .stat-val { color: var(--text); font-size: 11px; }
+  .stat-val.green { color: var(--green); }
+  .stat-val.red   { color: var(--red); }
+
+  /* ── Section headers ──────────────────────────────────── */
+  .section-title {
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title::after {
+    content:'';
+    flex:1;
+    height:1px;
+    background: var(--border);
+  }
+
+  /* ── Bot Controls ─────────────────────────────────────── */
+  .btn {
+    padding: 10px 22px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.15s;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-start {
+    background: var(--green);
+    color: #000;
+  }
+  .btn-start:hover { background: #00e88d; box-shadow: var(--glow-g); }
+  .btn-stop {
+    background: var(--red);
+    color: #fff;
+  }
+  .btn-stop:hover { background: #ff2244; box-shadow: var(--glow-r); }
+  .btn-save {
+    background: var(--blue2);
+    color: #fff;
+  }
+  .btn-save:hover { background: var(--blue); }
+  .btn-secondary {
+    background: transparent;
+    color: var(--text2);
+    border: 1px solid var(--border2);
+  }
+  .btn-secondary:hover { color: var(--text); border-color: var(--text2); }
+  .btn:disabled { opacity:0.4; cursor:not-allowed; }
+
+  /* ── Position cards ───────────────────────────────────── */
+  .position-card {
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: var(--bg3);
+  }
+  .pos-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .pos-symbol {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 14px;
+    color: #fff;
+  }
+  .pos-side {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 3px 8px;
+    border-radius: 2px;
+  }
+  .pos-side.long { background: rgba(0,255,157,0.15); color: var(--green); border: 1px solid rgba(0,255,157,0.3); }
+  .pos-side.short { background: rgba(255,59,92,0.15); color: var(--red); border: 1px solid rgba(255,59,92,0.3); }
+  .pos-prices {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    font-size: 10px;
+  }
+  .pos-price-item .label { color: var(--text3); margin-bottom:2px; }
+  .pos-price-item .value { font-size:12px; }
+
+  /* ── Trade table ──────────────────────────────────────── */
+  .trade-table { width:100%; border-collapse:collapse; }
+  .trade-table th {
+    text-align:left;
+    padding: 8px 12px;
+    font-size: 9px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    color: var(--text3);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--sans);
+  }
+  .trade-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text);
+  }
+  .trade-table tr:hover td { background: var(--bg3); }
+  .trade-table tr.win td:first-child { border-left: 2px solid var(--green); }
+  .trade-table tr.loss td:first-child { border-left: 2px solid var(--red); }
+  .pnl-pos { color: var(--green); }
+  .pnl-neg { color: var(--red); }
+  .badge {
+    font-size:9px; font-weight:700; letter-spacing:1px;
+    padding: 2px 6px; border-radius:2px;
+  }
+  .badge-long  { background:rgba(0,255,157,0.1); color:var(--green); }
+  .badge-short { background:rgba(255,59,92,0.1); color:var(--red); }
+  .badge-tp { background:rgba(59,158,255,0.1); color:var(--blue); }
+  .badge-sl { background:rgba(255,59,92,0.1); color:var(--red); }
+
+  /* ── P&L Chart (canvas) ───────────────────────────────── */
+  #pnlChart { width:100%; height:180px; display:block; }
+
+  /* ── Orderbook ────────────────────────────────────────── */
+  .ob-row {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding: 2px 0;
+    font-size:11px;
+    position:relative;
+  }
+  .ob-bar {
+    position:absolute;
+    top:0; bottom:0;
+    opacity:0.12;
+    border-radius:1px;
+  }
+  .ob-bar.bid { background:var(--green); right:0; }
+  .ob-bar.ask { background:var(--red); left:0; }
+
+  /* ── Log viewer ───────────────────────────────────────── */
+  .log-viewer {
+    background: #020608;
+    border: 1px solid var(--border);
+    border-radius:4px;
+    padding: 12px;
+    height: 400px;
+    overflow-y: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.7;
+  }
+  .log-line { color: var(--text2); }
+  .log-line.info  { color: var(--text); }
+  .log-line.warn  { color: var(--yellow); }
+  .log-line.error { color: var(--red); }
+  .log-line.green { color: var(--green); }
+
+  /* ── Settings form ────────────────────────────────────── */
+  .form-group { margin-bottom: 16px; }
+  .form-label {
+    display:block;
+    font-size: 9px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    color: var(--text3);
+    margin-bottom: 6px;
+    font-family: var(--sans);
+    font-weight: 700;
+  }
+  .form-input, .form-select {
+    width:100%;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    padding: 9px 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    border-radius: 3px;
+    outline:none;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus { border-color: var(--blue); }
+  .form-input.secret { letter-spacing: 3px; }
+  .form-range {
+    width:100%;
+    accent-color: var(--green);
+  }
+  .range-display {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-top: 4px;
+  }
+  .range-val {
+    font-size:14px;
+    color: var(--green);
+    font-family: var(--sans);
+    font-weight:700;
+  }
+  .form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .toggle-group {
+    display:flex;
+    gap:8px;
+  }
+  .toggle-btn {
+    flex:1;
+    padding: 8px;
+    text-align:center;
+    cursor:pointer;
+    border-radius:3px;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:1px;
+    font-family:var(--sans);
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    background: transparent;
+    transition: all 0.15s;
+  }
+  .toggle-btn.active.testnet { background:rgba(255,217,74,0.1); color:var(--yellow); border-color:rgba(255,217,74,0.4); }
+  .toggle-btn.active.mainnet { background:rgba(255,59,92,0.1); color:var(--red); border-color:rgba(255,59,92,0.4); }
+
+  /* ── Toasts ───────────────────────────────────────────── */
+  #toast {
+    position:fixed; bottom:24px; right:24px;
+    padding: 12px 20px;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius:4px;
+    font-size:12px;
+    z-index:9999;
+    transform:translateY(80px);
+    opacity:0;
+    transition: all 0.3s;
+    max-width:300px;
+  }
+  #toast.show { transform:translateY(0); opacity:1; }
+  #toast.green { border-color:var(--green); color:var(--green); }
+  #toast.red   { border-color:var(--red);   color:var(--red); }
+
+  /* ── Scrollbar ────────────────────────────────────────── */
+  ::-webkit-scrollbar { width:4px; height:4px; }
+  ::-webkit-scrollbar-track { background:var(--bg); }
+  ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:2px; }
+  ::-webkit-scrollbar-thumb:hover { background:var(--text3); }
+
+  /* ── Progress bar ─────────────────────────────────────── */
+  .progress-bar {
+    height:4px;
+    background:var(--border);
+    border-radius:2px;
+    overflow:hidden;
+    margin-top:8px;
+  }
+  .progress-fill {
+    height:100%;
+    border-radius:2px;
+    transition: width 0.5s;
+  }
+  .progress-fill.green { background:var(--green); }
+  .progress-fill.red   { background:var(--red); }
+  .progress-fill.yellow{ background:var(--yellow); }
+
+  /* ── Symbol selector ──────────────────────────────────── */
+  .symbol-btn {
+    padding: 5px 12px;
+    border-radius:2px;
+    cursor:pointer;
+    font-size:11px;
+    font-weight:700;
+    font-family:var(--sans);
+    border: 1px solid var(--border2);
+    color: var(--text2);
+    background: transparent;
+    transition:all 0.15s;
+  }
+  .symbol-btn.active {
+    background:rgba(59,158,255,0.15);
+    color: var(--blue);
+    border-color: rgba(59,158,255,0.4);
+  }
+
+  @media(max-width:900px){
+    .grid-4 { grid-template-columns:1fr 1fr; }
+    .grid-main { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══════════════════════════════════════════════════ -->
+<header>
+  <div style="display:flex;align-items:center;gap:16px;">
+    <div class="logo">BINGX<span>.</span>SCALPER</div>
+    <span id="networkBadge" class="network-badge testnet">TESTNET</span>
+  </div>
+  <div class="header-status">
+    <div style="font-size:11px;color:var(--text2);">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">DURDURULDU</span>
+    </div>
+    <div style="font-size:11px;color:var(--text2);">
+      BTC: <span id="headerBtc" style="color:var(--text)">—</span>
+    </div>
+    <div style="font-size:11px;color:var(--text2);">
+      ETH: <span id="headerEth" style="color:var(--text)">—</span>
+    </div>
+    <button class="btn btn-start" id="mainToggleBtn" onclick="toggleBot()">▶ BAŞLAT</button>
+  </div>
+</header>
+
+<!-- ═══ TABS ══════════════════════════════════════════════════════ -->
+<div class="tabs">
+  <div class="tab active" onclick="showTab('overview')">Genel Bakış</div>
+  <div class="tab" onclick="showTab('trades')">İşlemler</div>
+  <div class="tab" onclick="showTab('settings')">Ayarlar</div>
+  <div class="tab" onclick="showTab('logs')">Loglar</div>
+  <div class="tab" onclick="showTab('backtest')">Backtest</div>
+</div>
+
+<!-- ═══ OVERVIEW TAB ══════════════════════════════════════════════ -->
+<div class="page active" id="tab-overview">
+
+  <!-- Stat cards -->
+  <div class="grid-4">
+    <div class="card">
+      <div class="card-label">Toplam Sermaye</div>
+      <div class="card-value" id="totalCapital">—</div>
+      <div class="card-sub" id="capitalChange">+0.00 USDT</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Günlük PNL</div>
+      <div class="card-value" id="dailyPnl">—</div>
+      <div class="card-sub" id="dailyPnlPct">%0.00</div>
+      <div class="progress-bar">
+        <div class="progress-fill green" id="dailyPnlBar" style="width:0%"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Win Rate</div>
+      <div class="card-value green" id="winRate">—</div>
+      <div class="card-sub" id="tradeCount">0 işlem</div>
+      <div class="progress-bar">
+        <div class="progress-fill green" id="winRateBar" style="width:0%"></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-label">Drawdown</div>
+      <div class="card-value" id="drawdown">—</div>
+      <div class="card-sub">Max %10.0</div>
+      <div class="progress-bar">
+        <div class="progress-fill red" id="drawdownBar" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-main">
+    <!-- Sol: Chart + Pozisyonlar -->
+    <div>
+      <!-- PNL Chart -->
+      <div class="card" style="margin-bottom:12px;">
+        <div class="section-title">Kümülatif PNL</div>
+        <canvas id="pnlChart"></canvas>
+      </div>
+
+      <!-- Orderbook -->
+      <div class="card">
+        <div class="section-title" style="margin-bottom:8px;">
+          Canlı Orderbook
+          <div style="display:flex;gap:6px;margin-left:auto;">
+            <button class="symbol-btn active" id="obBtcBtn" onclick="switchOB('BTCUSDT')">BTC</button>
+            <button class="symbol-btn" id="obEthBtn" onclick="switchOB('ETHUSDT')">ETH</button>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:start;">
+          <div>
+            <div style="font-size:9px;letter-spacing:2px;color:var(--green);margin-bottom:6px;font-family:var(--sans);font-weight:700;">ALIM (BID)</div>
+            <div id="obBids"></div>
+          </div>
+          <div style="text-align:center;padding-top:20px;">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:4px;">SPREAD</div>
+            <div id="obSpread" style="font-size:13px;color:var(--yellow);font-family:var(--sans);font-weight:700;">—</div>
+            <div style="margin-top:12px;font-size:9px;color:var(--text3);">IMB</div>
+            <div id="obImbalance" style="font-size:13px;font-family:var(--sans);font-weight:700;">—</div>
+          </div>
+          <div>
+            <div style="font-size:9px;letter-spacing:2px;color:var(--red);margin-bottom:6px;font-family:var(--sans);font-weight:700;">SATIM (ASK)</div>
+            <div id="obAsks"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sağ: Pozisyonlar + Performans -->
+    <div>
+      <!-- Açık Pozisyonlar -->
+      <div class="card" style="margin-bottom:12px;">
+        <div class="section-title">Açık Pozisyonlar</div>
+        <div id="positionsList">
+          <div style="color:var(--text3);font-size:11px;text-align:center;padding:20px 0;">
+            Açık pozisyon yok
+          </div>
+        </div>
+      </div>
+
+      <!-- Performans istatistikleri -->
+      <div class="card" style="margin-bottom:12px;">
+        <div class="section-title">Performans</div>
+        <div class="stat-row">
+          <span class="stat-key">Sharpe Oranı</span>
+          <span class="stat-val" id="sharpe">—</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-key">Ort. Kazanç</span>
+          <span class="stat-val green" id="avgWin">—</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-key">Ort. Kayıp</span>
+          <span class="stat-val red" id="avgLoss">—</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-key">R:R Oranı</span>
+          <span class="stat-val" id="rrRatio">—</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-key">Ort. Süre</span>
+          <span class="stat-val" id="avgDuration">—</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-key">Max Drawdown</span>
+          <span class="stat-val red" id="maxDd">—</span>
+        </div>
+      </div>
+
+      <!-- Sembol bazlı -->
+      <div class="card">
+        <div class="section-title">Sembol Bazlı</div>
+        <div id="symbolStats">
+          <div style="color:var(--text3);font-size:11px;text-align:center;padding:10px 0;">
+            Henüz veri yok
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TRADES TAB ═════════════════════════════════════════════════ -->
+<div class="page" id="tab-trades">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <div class="section-title" style="margin-bottom:0;">İşlem Geçmişi</div>
+      <div style="font-size:11px;color:var(--text2);" id="tradeTableCount">0 işlem</div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="trade-table">
+        <thead>
+          <tr>
+            <th>Tarih</th>
+            <th>Sembol</th>
+            <th>Yön</th>
+            <th>Giriş</th>
+            <th>Çıkış</th>
+            <th>Boyut</th>
+            <th>PNL (USDT)</th>
+            <th>PNL %</th>
+            <th>Süre</th>
+            <th>Çıkış Sebebi</th>
+          </tr>
+        </thead>
+        <tbody id="tradesTableBody">
+          <tr>
+            <td colspan="10" style="text-align:center;color:var(--text3);padding:30px;">
+              Henüz işlem yok
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SETTINGS TAB ══════════════════════════════════════════════ -->
+<div class="page" id="tab-settings">
+  <div class="grid-2">
+    <!-- API Ayarları -->
+    <div class="card">
+      <div class="section-title">API Bağlantısı</div>
+
+      <div class="form-group">
+        <label class="form-label">Ağ Seçimi</label>
+        <div style="padding:10px;background:rgba(0,255,157,0.05);border:1px solid rgba(0,255,157,0.2);border-radius:3px;font-size:10px;color:var(--green);">
+          BingX gercek hesap kullanir. Kucuk sermaye ile baslayin (100-200 USDT).
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">BingX API Key</label>
+        <input class="form-input" id="apiKey" type="text" placeholder="BingX API Key...">
+      </div>
+      <div class="form-group">
+        <label class="form-label">BingX API Secret</label>
+        <input class="form-input secret" id="apiSecret" type="password" placeholder="BingX Secret Key...">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Coinglass API Key <span style="color:var(--text3)">(opsiyonel)</span></label>
+        <input class="form-input" id="cgKey" type="text" placeholder="Coinglass API key...">
+        <div style="font-size:10px;color:var(--text3);margin-top:4px;">
+          Yoksa likidasyon verileri simüle edilir. Ücretsiz tier: coinglass.com
+        </div>
+      </div>
+
+      <div style="background:rgba(59,158,255,0.05);border:1px solid rgba(59,158,255,0.3);border-radius:3px;padding:12px;margin-top:8px;font-size:10px;color:var(--blue);line-height:1.9;">
+        <strong>BingX API KEY nasil alinir?</strong><br>
+        1. <a href="https://bingx.com" target="_blank" style="color:var(--green);">bingx.com</a> → Giris yap / Kayit ol<br>
+        2. Sag ust avatar → API Management<br>
+        3. "Create API" → isim ver (orn: scalper)<br>
+        4. Izinler: <strong>Perpetual Futures Trade</strong> sec<br>
+        5. IP kisitlamasi: Bos birak (veya kendi IP'ni gir)<br>
+        6. 2FA dogrula → Key + Secret kopyala<br>
+        7. Buraya yapistir → KAYDET
+      </div>
+      <div style="background:rgba(0,255,157,0.05);border:1px solid rgba(0,255,157,0.2);border-radius:3px;padding:8px;margin-top:6px;font-size:10px;color:var(--green);">
+        BingX Avrupa'da tam destekli — kaldirali futures islemi yapilabilir!
+      </div>
+    </div>
+
+    <!-- Bot Parametreleri -->
+    <div class="card">
+      <div class="section-title">Bot Parametreleri</div>
+
+      <div class="form-group">
+        <label class="form-label">Kaldıraç (Leverage)</label>
+        <input type="range" class="form-range" id="leverageRange" min="5" max="40" value="15"
+               oninput="document.getElementById('leverageVal').textContent=this.value+'x'">
+        <div class="range-display">
+          <span style="color:var(--text3);font-size:10px;">5x</span>
+          <span class="range-val" id="leverageVal">15x</span>
+          <span style="color:var(--text3);font-size:10px;">40x</span>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Stop-Loss %</label>
+          <input type="range" class="form-range" id="slRange" min="0.1" max="1.0" step="0.1" value="0.4"
+                 oninput="document.getElementById('slVal').textContent='%'+this.value">
+          <div class="range-display">
+            <span style="color:var(--text3);font-size:10px;">%0.1</span>
+            <span class="range-val" id="slVal">%0.4</span>
+            <span style="color:var(--text3);font-size:10px;">%1.0</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Take-Profit %</label>
+          <input type="range" class="form-range" id="tpRange" min="0.5" max="3.0" step="0.1" value="1.0"
+                 oninput="document.getElementById('tpVal').textContent='%'+this.value">
+          <div class="range-display">
+            <span style="color:var(--text3);font-size:10px;">%0.5</span>
+            <span class="range-val" id="tpVal">%1.0</span>
+            <span style="color:var(--text3);font-size:10px;">%3.0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Trailing Stop %</label>
+          <input type="range" class="form-range" id="tsRange" min="0.1" max="1.0" step="0.1" value="0.3"
+                 oninput="document.getElementById('tsVal').textContent='%'+this.value">
+          <div class="range-display">
+            <span style="color:var(--text3);font-size:10px;">%0.1</span>
+            <span class="range-val" id="tsVal">%0.3</span>
+            <span style="color:var(--text3);font-size:10px;">%1.0</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Max Risk / Trade %</label>
+          <input type="range" class="form-range" id="riskRange" min="0.5" max="5.0" step="0.5" value="2.0"
+                 oninput="document.getElementById('riskVal').textContent='%'+this.value">
+          <div class="range-display">
+            <span style="color:var(--text3);font-size:10px;">%0.5</span>
+            <span class="range-val" id="riskVal">%2.0</span>
+            <span style="color:var(--text3);font-size:10px;">%5.0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Başlangıç Sermayesi (USDT)</label>
+        <input class="form-input" id="capitalInput" type="number" value="1000" min="100" step="100">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">İşlem Çiftleri</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;">
+            <input type="checkbox" id="symBtc" checked style="accent-color:var(--green)"> BTC-USDT
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;">
+            <input type="checkbox" id="symEth" checked style="accent-color:var(--green)"> ETH-USDT
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;">
+            <input type="checkbox" id="symSol" style="accent-color:var(--green)"> SOL-USDT
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:10px;">
+    <button class="btn btn-save" onclick="saveSettings()">💾 AYARLARI KAYDET</button>
+    <button class="btn btn-secondary" onclick="loadSettings()">↺ YENILE</button>
+  </div>
+</div>
+
+<!-- ═══ LOGS TAB ═══════════════════════════════════════════════════ -->
+<div class="page" id="tab-logs">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div class="section-title" style="margin-bottom:0;">Sistem Logları</div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary" onclick="loadLogs()" style="padding:6px 14px;font-size:10px;">↺ YENİLE</button>
+        <button class="btn btn-secondary" onclick="clearLogView()" style="padding:6px 14px;font-size:10px;">✕ TEMİZLE</button>
+        <label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;">
+          <input type="checkbox" id="autoScrollLog" checked style="accent-color:var(--green)"> Otomatik kaydır
+        </label>
+      </div>
+    </div>
+    <div class="log-viewer" id="logViewer"></div>
+  </div>
+</div>
+
+
+<!-- ═══ BACKTEST TAB ══════════════════════════════════════════════ -->
+<div class="page" id="tab-backtest">
+
+  <div class="grid-2" style="margin-bottom:12px;">
+    <!-- Sol: Parametreler -->
+    <div class="card">
+      <div class="section-title">Backtest Parametreleri</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Sembol</label>
+          <select class="form-select" id="btSymbol">
+            <option value="BTC-USDT">BTC-USDT</option>
+            <option value="ETH-USDT">ETH-USDT</option>
+            <option value="SOL-USDT">SOL-USDT</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Mum Periyodu</label>
+          <select class="form-select" id="btInterval">
+            <option value="5">5 dakika</option>
+            <option value="15" selected>15 dakika</option>
+            <option value="30">30 dakika</option>
+            <option value="60">1 saat</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Donem</label>
+        <input type="range" class="form-range" id="btDays" min="30" max="365" value="90"
+               oninput="document.getElementById('btDaysVal').textContent=this.value+' gun'">
+        <div class="range-display">
+          <span style="color:var(--text3);font-size:10px;">30g</span>
+          <span class="range-val" id="btDaysVal">90 gun</span>
+          <span style="color:var(--text3);font-size:10px;">365g</span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Kaldirec</label>
+          <input type="range" class="form-range" id="btLeverage" min="5" max="40" value="15"
+                 oninput="document.getElementById('btLevVal').textContent=this.value+'x'">
+          <div class="range-display">
+            <span style="color:var(--text3);font-size:10px;">5x</span>
+            <span class="range-val" id="btLevVal">15x</span>
+            <span style="color:var(--text3);font-size:10px;">40x</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sermaye (USDT)</label>
+          <input class="form-input" id="btCapital" type="number" value="1000" min="100">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Stop-Loss %</label>
+          <input type="range" class="form-range" id="btSL" min="0.1" max="2.0" step="0.1" value="0.4"
+                 oninput="document.getElementById('btSLVal').textContent='%'+this.value">
+          <div class="range-display">
+            <span style="color:var(--text3);font-size:10px;">%0.1</span>
+            <span class="range-val" id="btSLVal">%0.4</span>
+            <span style="color:var(--text3);font-size:10px;">%2.0</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Take-Profit %</label>
+          <input type="range" class="form-range" id="btTP" min="0.5" max="5.0" step="0.1" value="1.0"
+                 oninput="document.getElementById('btTPVal').textContent='%'+this.value">
+          <div class="range-display">
+            <span style="color:var(--text3);font-size:10px;">%0.5</span>
+            <span class="range-val" id="btTPVal">%1.0</span>
+            <span style="color:var(--text3);font-size:10px;">%5.0</span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:8px;">
+        <button class="btn btn-start" id="btRunBtn" onclick="runBacktest()" style="flex:2;">
+          &#9654; BACKTEST BASLAT
+        </button>
+        <button class="btn btn-secondary" id="btLoadBtn" onclick="loadLastResult()" style="flex:1;font-size:10px;">
+          &#8635; SON SONUC
+        </button>
+      </div>
+      <div id="btProgress" style="margin-top:12px;padding:10px;background:var(--bg3);border-radius:3px;display:none;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:10px;height:10px;border-radius:50%;border:2px solid var(--green);border-top-color:transparent;animation:btspin 1s linear infinite;flex-shrink:0;"></div>
+          <span id="btProgressText" style="font-size:11px;color:var(--green);">Baslatiliyor...</span>
+        </div>
+        <div class="progress-bar" style="margin-top:8px;">
+          <div class="progress-fill green" id="btProgBar" style="width:30%;animation:btprog 2s ease infinite;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sag: Ozet -->
+    <div class="card" id="btSummaryCard">
+      <div class="section-title">Sonuc Ozeti</div>
+      <div id="btEmptyState" style="color:var(--text3);font-size:11px;text-align:center;padding:40px 0;">
+        Backtest baslatmak icin sol paneli kullanin.<br><br>
+        <span style="font-size:10px;">Bybit'ten gercek OHLCV verisi cekilir.<br>API key gerekmez.</span>
+      </div>
+      <div id="btResults" style="display:none;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+          <div>
+            <div class="card-label">Toplam Getiri</div>
+            <div class="card-value" id="btReturn" style="font-size:20px;">—</div>
+            <div class="card-sub" id="btReturnPct"></div>
+          </div>
+          <div>
+            <div class="card-label">Win Rate</div>
+            <div class="card-value green" id="btWinRate" style="font-size:20px;">—</div>
+            <div class="card-sub" id="btTradeCount"></div>
+          </div>
+        </div>
+        <div class="stat-row"><span class="stat-key">Profit Factor</span><span class="stat-val" id="btPF">—</span></div>
+        <div class="stat-row"><span class="stat-key">Sharpe Orani</span><span class="stat-val" id="btSharpe">—</span></div>
+        <div class="stat-row"><span class="stat-key">Calmar Orani</span><span class="stat-val" id="btCalmar">—</span></div>
+        <div class="stat-row"><span class="stat-key">Max Drawdown</span><span class="stat-val red" id="btDD">—</span></div>
+        <div class="stat-row"><span class="stat-key">R:R Orani</span><span class="stat-val" id="btRR">—</span></div>
+        <div class="stat-row"><span class="stat-key">TP / SL Cikis</span><span class="stat-val" id="btTPSL">—</span></div>
+        <div class="stat-row"><span class="stat-key">Erken Cikis</span><span class="stat-val yellow" id="btEarlyExit">—</span></div>
+        <div class="stat-row"><span class="stat-key">Max Kaz/Kay Serisi</span><span class="stat-val" id="btStreaks">—</span></div>
+        <div id="btVerdict" style="margin-top:12px;padding:10px;border-radius:3px;font-size:11px;line-height:1.7;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Equity Egrisi + Aylik PNL -->
+  <div class="grid-main" style="margin-bottom:12px;">
+    <div class="card">
+      <div class="section-title">Equity Egrisi</div>
+      <canvas id="btEquityChart" style="width:100%;height:200px;display:block;"></canvas>
+      <div id="btEquityEmpty" style="color:var(--text3);text-align:center;padding:80px 0;font-size:11px;">Sonuc bekleniyor...</div>
+    </div>
+    <div class="card">
+      <div class="section-title">Aylik PNL</div>
+      <div id="btMonthly" style="max-height:260px;overflow-y:auto;">
+        <div style="color:var(--text3);text-align:center;padding:60px 0;font-size:11px;">Sonuc bekleniyor...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Islem listesi -->
+  <div class="card" style="margin-bottom:12px;">
+    <div class="section-title">Simule Edilen Son 100 Islem</div>
+    <div style="overflow-x:auto;">
+      <table class="trade-table">
+        <thead>
+          <tr>
+            <th>Acilis</th><th>Kapanis</th><th>Yon</th>
+            <th>Giris</th><th>SL</th><th>TP</th><th>Cikis</th>
+            <th>PNL (USDT)</th><th>PNL %</th>
+            <th>Cikis Sebebi</th><th>L/S Skor</th>
+          </tr>
+        </thead>
+        <tbody id="btTradesBody">
+          <tr><td colspan="9" style="text-align:center;color:var(--text3);padding:20px;">Henuz backtest yapilmadi</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes btspin { to { transform:rotate(360deg); } }
+@keyframes btprog { 0%{width:20%} 50%{width:80%} 100%{width:20%} }
+.badge-early { background:rgba(255,217,74,0.15); color:var(--yellow); border:1px solid var(--yellow); }
+</style>
+
+<!-- ═══ TOAST ══════════════════════════════════════════════════════ -->
+<div id="toast"></div>
+
+<!-- ═══ JAVASCRIPT ═════════════════════════════════════════════════ -->
+<script>
+// ── State ───────────────────────────────────────────────────────
+let botRunning = false;
+let useTestnet = true;
+let currentOBSymbol = 'BTCUSDT';
+let ws = null;
+let pnlHistory = [];
+let lastStatus = {};
+const MAX_PNL_POINTS = 100;
+
+// ── Tab switching ────────────────────────────────────────────────
+function showTab(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.target.classList.add('active');
+  if (id === 'trades') loadTrades();
+  if (id === 'logs')   loadLogs();
+  if (id === 'settings') loadSettings();
+}
+
+// ── Toast notification ───────────────────────────────────────────
+function toast(msg, type='green') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `show ${type}`;
+  setTimeout(() => el.className = '', 3000);
+}
+
+// ── Bot toggle ───────────────────────────────────────────────────
+async function toggleBot() {
+  const btn = document.getElementById('mainToggleBtn');
+  btn.disabled = true;
+  try {
+    if (!botRunning) {
+      const r = await fetch('/api/bot/start', {method:'POST'});
+      const d = await r.json();
+      if (d.ok) { toast('Bot baslatildi!'); }
+      else { toast(d.message || 'Baslatilamadi', 'red'); }
+    } else {
+      const r = await fetch('/api/bot/stop', {method:'POST'});
+      const d = await r.json();
+      if (d.ok) { toast('Bot durduruldu', 'red'); }
+    }
+  } catch(e) { toast('Bağlantı hatası', 'red'); }
+  finally { btn.disabled = false; }
+}
+
+// ── Update UI from status ────────────────────────────────────────
+function updateUI(data) {
+  lastStatus = data;
+  botRunning = data.running;
+
+  const dot  = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  const btn  = document.getElementById('mainToggleBtn');
+
+  if (data.running) {
+    dot.classList.add('active');
+    text.textContent = 'ÇALIŞIYOR';
+    btn.textContent = '■ DURDUR';
+    btn.className = 'btn btn-stop';
+  } else {
+    dot.classList.remove('active');
+    text.textContent = 'DURDURULDU';
+    btn.textContent = '▶ BAŞLAT';
+    btn.className = 'btn btn-start';
+  }
+
+  // Capital
+  if (data.capital) {
+    document.getElementById('totalCapital').textContent = data.capital.toFixed(2) + ' USDT';
+    const change = data.capital - data.initial_capital;
+    const chEl = document.getElementById('capitalChange');
+    chEl.textContent = (change >= 0 ? '+' : '') + change.toFixed(2) + ' USDT';
+    chEl.className = 'card-sub ' + (change >= 0 ? 'green' : 'red');
+  }
+
+  // Daily PNL
+  if (data.daily_pnl !== undefined) {
+    const pnlEl = document.getElementById('dailyPnl');
+    pnlEl.textContent = (data.daily_pnl >= 0 ? '+' : '') + data.daily_pnl.toFixed(2) + ' USDT';
+    pnlEl.className = 'card-value ' + (data.daily_pnl >= 0 ? 'green' : 'red');
+    const pctEl = document.getElementById('dailyPnlPct');
+    pctEl.textContent = (data.daily_pnl_pct >= 0 ? '+' : '') + data.daily_pnl_pct.toFixed(2) + '%';
+    pctEl.className = 'card-sub ' + (data.daily_pnl_pct >= 0 ? 'green' : 'red');
+    const barW = Math.min(Math.abs(data.daily_pnl_pct) / 5 * 100, 100);
+    document.getElementById('dailyPnlBar').style.width = barW + '%';
+    document.getElementById('dailyPnlBar').className = 'progress-fill ' + (data.daily_pnl >= 0 ? 'green' : 'red');
+  }
+
+  // Win rate
+  if (data.win_rate !== undefined) {
+    document.getElementById('winRate').textContent = data.win_rate.toFixed(1) + '%';
+    document.getElementById('tradeCount').textContent = (data.total_trades || 0) + ' işlem';
+    document.getElementById('winRateBar').style.width = data.win_rate + '%';
+  }
+
+  // Drawdown
+  if (data.drawdown_pct !== undefined) {
+    const ddEl = document.getElementById('drawdown');
+    ddEl.textContent = data.drawdown_pct.toFixed(2) + '%';
+    ddEl.className = 'card-value ' + (data.drawdown_pct > 5 ? 'red' : data.drawdown_pct > 2 ? 'yellow' : 'green');
+    document.getElementById('drawdownBar').style.width = Math.min(data.drawdown_pct / 10 * 100, 100) + '%';
+  }
+
+  // Header prices
+  if (data.orderbooks) {
+    const btc = data.orderbooks['BTCUSDT'];
+    const eth = data.orderbooks['ETHUSDT'];
+    if (btc) document.getElementById('headerBtc').textContent = btc.mid.toLocaleString('en-US', {maximumFractionDigits:1});
+    if (eth) document.getElementById('headerEth').textContent = eth.mid.toLocaleString('en-US', {maximumFractionDigits:2});
+    updateOrderbookUI(data.orderbooks);
+  }
+
+  // Positions
+  updatePositions(data.open_positions || []);
+
+  // PNL chart
+  if (data.daily_pnl !== undefined) {
+    pnlHistory.push({ t: Date.now(), v: data.capital || 0 });
+    if (pnlHistory.length > MAX_PNL_POINTS) pnlHistory.shift();
+    drawPnlChart();
+  }
+}
+
+// ── Orderbook UI ─────────────────────────────────────────────────
+function updateOrderbookUI(orderbooks) {
+  const ob = orderbooks[currentOBSymbol];
+  if (!ob) return;
+
+  // Spread & imbalance
+  const spread = ob.ask && ob.bid ? ((ob.ask - ob.bid) / ob.bid * 100).toFixed(4) : '—';
+  document.getElementById('obSpread').textContent = spread + '%';
+
+  const imb = ob.imbalance || 1;
+  const imbEl = document.getElementById('obImbalance');
+  imbEl.textContent = imb.toFixed(3);
+  imbEl.style.color = imb > 1.5 ? 'var(--green)' : imb < 0.67 ? 'var(--red)' : 'var(--yellow)';
+}
+
+function switchOB(symbol) {
+  currentOBSymbol = symbol;
+  document.getElementById('obBtcBtn').classList.toggle('active', symbol === 'BTCUSDT');
+  document.getElementById('obEthBtn').classList.toggle('active', symbol === 'ETHUSDT');
+}
+
+// ── Positions ────────────────────────────────────────────────────
+function updatePositions(positions) {
+  const el = document.getElementById('positionsList');
+  if (!positions.length) {
+    el.innerHTML = '<div style="color:var(--text3);font-size:11px;text-align:center;padding:20px 0;">Açık pozisyon yok</div>';
+    return;
+  }
+  el.innerHTML = positions.map(p => `
+    <div class="position-card">
+      <div class="pos-header">
+        <span class="pos-symbol">${p.symbol}</span>
+        <span class="pos-side ${p.side === 'Buy' ? 'long' : 'short'}">${p.side === 'Buy' ? 'LONG' : 'SHORT'}</span>
+      </div>
+      <div class="pos-prices">
+        <div class="pos-price-item">
+          <div class="label">Giriş</div>
+          <div class="value">${p.entry.toLocaleString()}</div>
+        </div>
+        <div class="pos-price-item">
+          <div class="label" style="color:var(--red)">Stop-Loss</div>
+          <div class="value" style="color:var(--red)">${p.sl.toLocaleString()}</div>
+        </div>
+        <div class="pos-price-item">
+          <div class="label" style="color:var(--green)">Take-Profit</div>
+          <div class="value" style="color:var(--green)">${p.tp.toLocaleString()}</div>
+        </div>
+      </div>
+      <div style="margin-top:8px;font-size:10px;color:var(--text3);">Boyut: ${p.size} | ${p.symbol.replace('USDT','')}</div>
+    </div>
+  `).join('');
+}
+
+// ── PNL Chart (canvas) ───────────────────────────────────────────
+function drawPnlChart() {
+  const canvas = document.getElementById('pnlChart');
+  if (!canvas || !pnlHistory.length) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth, H = 180;
+  canvas.width = W; canvas.height = H;
+
+  const values = pnlHistory.map(p => p.v);
+  const minV = Math.min(...values);
+  const maxV = Math.max(...values);
+  const range = maxV - minV || 1;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Background grid
+  ctx.strokeStyle = 'rgba(30,45,61,0.8)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = H * 0.1 + (H * 0.8 * i / 4);
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // Gradient fill
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  const isUp = values[values.length-1] >= values[0];
+  grad.addColorStop(0, isUp ? 'rgba(0,255,157,0.3)' : 'rgba(255,59,92,0.3)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+
+  const pts = pnlHistory.map((p, i) => ({
+    x: W * i / (pnlHistory.length - 1 || 1),
+    y: H * 0.85 - ((p.v - minV) / range) * H * 0.75,
+  }));
+
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, H);
+  pts.forEach(pt => ctx.lineTo(pt.x, pt.y));
+  ctx.lineTo(pts[pts.length-1].x, H);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  pts.forEach((pt, i) => {
+    if (i > 0) {
+      const prev = pts[i-1];
+      const cx = (prev.x + pt.x) / 2;
+      ctx.bezierCurveTo(cx, prev.y, cx, pt.y, pt.x, pt.y);
+    }
+  });
+  ctx.strokeStyle = isUp ? 'var(--green)' : 'var(--red)';
+  ctx.lineWidth = 2;
+  ctx.shadowColor = isUp ? 'var(--green)' : 'var(--red)';
+  ctx.shadowBlur = 6;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Current value label
+  const last = pts[pts.length-1];
+  const lastV = values[values.length-1];
+  ctx.fillStyle = isUp ? 'var(--green)' : 'var(--red)';
+  ctx.font = 'bold 12px Syne, sans-serif';
+  ctx.fillText(lastV.toFixed(2) + ' USDT', last.x - 60, last.y - 8);
+}
+
+// ── Trade table ──────────────────────────────────────────────────
+async function loadTrades() {
+  try {
+    const r = await fetch('/api/trades?limit=200');
+    const d = await r.json();
+    const tbody = document.getElementById('tradesTableBody');
+    document.getElementById('tradeTableCount').textContent = d.total + ' işlem';
+
+    if (!d.trades.length) {
+      tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:30px;">Henüz işlem yok</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = d.trades.map(t => `
+      <tr class="${t.is_win ? 'win' : 'loss'}">
+        <td>${t.ts}</td>
+        <td>${t.symbol}</td>
+        <td><span class="badge badge-${t.side === 'Buy' ? 'long' : 'short'}">${t.side === 'Buy' ? 'LONG' : 'SHORT'}</span></td>
+        <td>${t.entry.toLocaleString()}</td>
+        <td>${t.exit.toLocaleString()}</td>
+        <td>${t.size}</td>
+        <td class="${t.pnl_usdt >= 0 ? 'pnl-pos' : 'pnl-neg'}">${t.pnl_usdt >= 0 ? '+' : ''}${t.pnl_usdt.toFixed(4)}</td>
+        <td class="${t.pnl_pct >= 0 ? 'pnl-pos' : 'pnl-neg'}">${t.pnl_pct >= 0 ? '+' : ''}${t.pnl_pct.toFixed(2)}%</td>
+        <td>${formatDuration(t.duration_sec)}</td>
+        <td><span class="badge badge-${t.exit_reason === 'take_profit' ? 'tp' : 'sl'}">${t.exit_reason}</span></td>
+      </tr>
+    `).join('');
+  } catch(e) { console.error(e); }
+}
+
+function formatDuration(sec) {
+  if (sec < 60) return sec.toFixed(0) + 's';
+  if (sec < 3600) return (sec/60).toFixed(1) + 'm';
+  return (sec/3600).toFixed(1) + 'h';
+}
+
+// ── Performance stats ─────────────────────────────────────────────
+async function loadPerformance() {
+  try {
+    const r = await fetch('/api/performance');
+    const d = await r.json();
+    if (!d.sharpe_approx) return;
+
+    document.getElementById('sharpe').textContent = d.sharpe_approx.toFixed(3);
+    document.getElementById('avgWin').textContent = '+' + d.avg_win_usdt?.toFixed(4) + ' USDT';
+    document.getElementById('avgLoss').textContent = d.avg_loss_usdt?.toFixed(4) + ' USDT';
+    document.getElementById('rrRatio').textContent = d.rr_ratio?.toFixed(2) + ':1';
+    document.getElementById('avgDuration').textContent = formatDuration(d.avg_duration_sec || 0);
+    document.getElementById('maxDd').textContent = d.max_dd_usdt?.toFixed(2) + ' USDT';
+
+    // Symbol stats
+    if (d.by_symbol) {
+      const el = document.getElementById('symbolStats');
+      el.innerHTML = Object.entries(d.by_symbol).map(([sym, s]) => `
+        <div class="stat-row">
+          <span class="stat-key">${sym}</span>
+          <span class="stat-val">${s.trades} işlem | Win:%${s.win_rate} | PNL:${s.total_pnl >= 0 ? '+' : ''}${s.total_pnl?.toFixed(2)}</span>
+        </div>
+      `).join('');
+    }
+  } catch(e) {}
+}
+
+// ── Settings ─────────────────────────────────────────────────────
+async function loadSettings() {
+  try {
+    const r = await fetch('/api/settings');
+    const d = await r.json();
+
+    document.getElementById('apiKey').value = d.bingx_api_key || '';
+    document.getElementById('cgKey').value  = d.coinglass_api_key || '';
+    document.getElementById('leverageRange').value = d.leverage || 15;
+    document.getElementById('leverageVal').textContent = (d.leverage || 15) + 'x';
+    document.getElementById('slRange').value = d.stop_loss_pct || 0.4;
+    document.getElementById('slVal').textContent = '%' + (d.stop_loss_pct || 0.4);
+    document.getElementById('tpRange').value = d.take_profit_pct || 1.0;
+    document.getElementById('tpVal').textContent = '%' + (d.take_profit_pct || 1.0);
+    document.getElementById('tsRange').value = d.trailing_stop_pct || 0.3;
+    document.getElementById('tsVal').textContent = '%' + (d.trailing_stop_pct || 0.3);
+    document.getElementById('riskRange').value = d.max_risk_pct || 2.0;
+    document.getElementById('riskVal').textContent = '%' + (d.max_risk_pct || 2.0);
+    document.getElementById('capitalInput').value = d.initial_capital || 1000;
+
+    useTestnet = d.use_testnet;
+    setNetwork(d.use_testnet, false);
+
+    const symbols = d.symbols || [];
+    document.getElementById('symBtc').checked = symbols.includes('BTCUSDT');
+    document.getElementById('symEth').checked = symbols.includes('ETHUSDT');
+    document.getElementById('symSol').checked = symbols.includes('SOLUSDT');
+  } catch(e) { toast('Ayarlar yüklenemedi', 'red'); }
+}
+
+async function saveSettings() {
+  const symbols = [];
+  if (document.getElementById('symBtc').checked) symbols.push('BTC-USDT');
+  if (document.getElementById('symEth').checked) symbols.push('ETH-USDT');
+  if (document.getElementById('symSol').checked) symbols.push('SOL-USDT');
+
+  const settings = {
+    bingx_api_key:    document.getElementById('apiKey').value,
+    bingx_api_secret: document.getElementById('apiSecret').value || undefined,
+    coinglass_api_key: document.getElementById('cgKey').value,
+    use_testnet:      useTestnet,
+    leverage:         parseInt(document.getElementById('leverageRange').value),
+    stop_loss_pct:    parseFloat(document.getElementById('slRange').value),
+    take_profit_pct:  parseFloat(document.getElementById('tpRange').value),
+    trailing_stop_pct: parseFloat(document.getElementById('tsRange').value),
+    max_risk_pct:     parseFloat(document.getElementById('riskRange').value),
+    initial_capital:  parseFloat(document.getElementById('capitalInput').value),
+    symbols:          symbols.length ? symbols : ['BTCUSDT'],
+  };
+
+  // Şifre alanı boşsa mevcut secret'ı koru
+  if (!settings.bybit_api_secret) delete settings.bybit_api_secret;
+
+  try {
+    const r = await fetch('/api/settings', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(settings),
+    });
+    const d = await r.json();
+    if (d.ok) toast('✅ Ayarlar kaydedildi!');
+    else toast('❌ ' + d.message, 'red');
+  } catch(e) { toast('Kaydetme hatası', 'red'); }
+}
+
+function setNetwork(testnet, saveState=true) {
+  if (saveState) useTestnet = testnet;
+  document.getElementById('btnTestnet').classList.toggle('active', testnet);
+  document.getElementById('btnMainnet').classList.toggle('active', !testnet);
+  document.getElementById('networkBadge').textContent = testnet ? 'TESTNET' : 'MAINNET';
+  document.getElementById('networkBadge').className = 'network-badge ' + (testnet ? 'testnet' : 'mainnet');
+}
+
+// ── Logs ──────────────────────────────────────────────────────────
+async function loadLogs() {
+  try {
+    const r = await fetch('/api/logs?lines=100');
+    const d = await r.json();
+    const el = document.getElementById('logViewer');
+    el.innerHTML = d.lines.map(line => {
+      let cls = 'log-line';
+      if (line.includes('ERROR') || line.includes('❌')) cls += ' error';
+      else if (line.includes('WARNING') || line.includes('⚠️')) cls += ' warn';
+      else if (line.includes('INFO') || line.includes('✅') || line.includes('🟢')) cls += ' info';
+      if (line.includes('POZİSYON') || line.includes('TRADE')) cls += ' green';
+      return `<div class="${cls}">${escapeHtml(line)}</div>`;
+    }).join('');
+    if (document.getElementById('autoScrollLog').checked) {
+      el.scrollTop = el.scrollHeight;
+    }
+  } catch(e) {}
+}
+
+function clearLogView() {
+  document.getElementById('logViewer').innerHTML = '';
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── WebSocket ─────────────────────────────────────────────────────
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  ws = new WebSocket(`${proto}//${location.host}/ws`);
+
+  ws.onmessage = (e) => {
+    try {
+      const data = JSON.parse(e.data);
+      updateUI(data);
+    } catch(err) {}
+  };
+
+  ws.onclose = () => {
+    setTimeout(connectWS, 3000);
+  };
+}
+
+// ── Init ──────────────────────────────────────────────────────────
+(async function init() {
+  connectWS();
+  loadSettings();
+  setInterval(loadPerformance, 10000);
+  setInterval(() => {
+    if (document.getElementById('tab-trades').classList.contains('active')) loadTrades();
+    if (document.getElementById('tab-logs').classList.contains('active')) loadLogs();
+  }, 5000);
+  loadPerformance();
+})();
+
+// ── BACKTEST ──────────────────────────────────────────────────────
+let btPollTimer = null;
+
+async function runBacktest() {
+  const btn = document.getElementById('btRunBtn');
+  btn.disabled = true;
+  document.getElementById('btProgress').style.display = 'block';
+  document.getElementById('btProgressText').textContent = 'Bybit API bağlanılıyor...';
+
+  const params = {
+    symbol:   document.getElementById('btSymbol').value,
+    interval: parseInt(document.getElementById('btInterval').value),
+    days:     parseInt(document.getElementById('btDays').value),
+    capital:  parseFloat(document.getElementById('btCapital').value),
+    leverage: parseInt(document.getElementById('btLeverage').value),
+    sl:       parseFloat(document.getElementById('btSL').value),
+    tp:       parseFloat(document.getElementById('btTP').value),
+    trailing: 0.3,
+  };
+
+  try {
+    const r = await fetch('/api/backtest/run', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(params),
+    });
+    const d = await r.json();
+    if (d.ok) {
+      toast('Backtest baslatildi — veri cekiliyor...');
+      btPollTimer = setInterval(pollBacktestStatus, 2000);
+    } else {
+      toast('Hata: ' + d.message, 'red');
+      btn.disabled = false;
+      document.getElementById('btProgress').style.display = 'none';
+    }
+  } catch(e) {
+    toast('Baglanti hatasi', 'red');
+    btn.disabled = false;
+    document.getElementById('btProgress').style.display = 'none';
+  }
+}
+
+async function pollBacktestStatus() {
+  try {
+    const r = await fetch('/api/backtest/status');
+    const d = await r.json();
+    document.getElementById('btProgressText').textContent = d.progress || 'Calisiyor...';
+    if (!d.running) {
+      clearInterval(btPollTimer);
+      document.getElementById('btRunBtn').disabled = false;
+      document.getElementById('btProgress').style.display = 'none';
+      if (d.error) {
+        toast('Backtest hatasi: ' + d.error, 'red');
+      } else if (d.result) {
+        renderBacktestResult(d.result);
+        toast('Backtest tamamlandi!');
+      }
+    }
+  } catch(e) {}
+}
+
+async function loadLastResult() {
+  const sym = document.getElementById('btSymbol').value || 'BTCUSDT';
+  try {
+    const r = await fetch('/api/backtest/result/' + sym);
+    if (!r.ok) { toast('Sunucu hatasi: ' + r.status, 'red'); return; }
+    const d = await r.json();
+    if (d && typeof d === 'object' && d.total_trades > 0) {
+      renderBacktestResult(d);
+      toast('Sonuc yuklendi: ' + sym);
+    } else {
+      toast('Kayitli sonuc yok. Once BACKTEST BASLAT butonuna basin!', 'red');
+    }
+  } catch(e) {
+    toast('Yukleme hatasi: ' + (e.message || 'bilinmiyor'), 'red');
+  }
+}
+async function loadBacktestResult(symbol) { return loadLastResult(); }
+
+function renderBacktestResult(r) {
+  if (!r || typeof r !== 'object') { toast('Gecersiz sonuc verisi', 'red'); return; }
+  if (r.error) { toast('Backtest hatasi: ' + r.error, 'red'); return; }
+  if (!r.total_trades || r.total_trades === 0) { toast('Hic trade olusturulamadi — parametreleri degistirip tekrar deneyin', 'red'); return; }
+
+  // Summary cards
+  document.getElementById('btEmptyState').style.display = 'none';
+  document.getElementById('btResults').style.display = 'block';
+
+  const isPos = r.total_return_pct >= 0;
+  document.getElementById('btReturn').textContent = (isPos?'+':'') + r.total_pnl.toFixed(2) + ' USDT';
+  document.getElementById('btReturn').className = 'card-value ' + (isPos?'green':'red');
+  document.getElementById('btReturnPct').textContent = (isPos?'+':'') + r.total_return_pct.toFixed(2) + '%';
+  document.getElementById('btReturnPct').className = 'card-sub ' + (isPos?'green':'red');
+
+  document.getElementById('btWinRate').textContent = r.win_rate.toFixed(1) + '%';
+  document.getElementById('btTradeCount').textContent = r.total_trades + ' islem (' + r.win_trades + 'W/' + r.loss_trades + 'L)';
+
+  const pfEl = document.getElementById('btPF');
+  pfEl.textContent = r.profit_factor.toFixed(3);
+  pfEl.className = 'stat-val ' + (r.profit_factor >= 1.5 ? 'green' : r.profit_factor >= 1.0 ? 'yellow' : 'red');
+
+  const shEl = document.getElementById('btSharpe');
+  shEl.textContent = r.sharpe.toFixed(3);
+  shEl.className = 'stat-val ' + (r.sharpe >= 1.5 ? 'green' : r.sharpe >= 0.5 ? 'yellow' : 'red');
+
+  document.getElementById('btCalmar').textContent = r.calmar.toFixed(3);
+  document.getElementById('btDD').textContent = r.max_drawdown_pct.toFixed(2) + '% (' + r.max_drawdown_usdt.toFixed(2) + ' USDT)';
+  document.getElementById('btRR').textContent = r.rr_ratio.toFixed(2) + ':1';
+  document.getElementById('btTPSL').textContent = 'TP:' + r.tp_exits + '  SL:' + r.sl_exits;
+  const earlyEl = document.getElementById('btEarlyExit');
+  if (earlyEl) earlyEl.textContent = (r.early_exits||0) + ' islem (karda ters sinyal)';
+  document.getElementById('btStreaks').textContent = r.max_win_streak + 'W / ' + r.max_loss_streak + 'L';
+
+  // Verdict
+  let score = 0;
+  let notes = [];
+  if (r.win_rate >= 55)         { score++; notes.push('Win rate iyi (%' + r.win_rate.toFixed(1) + ')'); }
+  else                           { notes.push('Win rate dusuk (%' + r.win_rate.toFixed(1) + ')'); }
+  if (r.profit_factor >= 1.5)   { score++; notes.push('Profit factor iyi (' + r.profit_factor.toFixed(2) + ')'); }
+  else                           { notes.push('Profit factor dusuk (' + r.profit_factor.toFixed(2) + ')'); }
+  if (r.max_drawdown_pct >= -15) { score++; notes.push('Drawdown kabul edilebilir'); }
+  else                           { notes.push('Drawdown cok yuksek (' + r.max_drawdown_pct.toFixed(1) + '%)'); }
+  if (r.sharpe >= 1.0)          { score++; notes.push('Sharpe iyi (' + r.sharpe.toFixed(2) + ')'); }
+  else                           { notes.push('Sharpe dusuk (' + r.sharpe.toFixed(2) + ')'); }
+  if (r.rr_ratio >= 1.5)        { score++; notes.push('R:R orani iyi (' + r.rr_ratio.toFixed(2) + ')'); }
+  else                           { notes.push('R:R dusuk (' + r.rr_ratio.toFixed(2) + ')'); }
+
+  const labels = ['BASARISIZ','ZAYIF','ORTA','IYI','COK IYI','MUKEMMEL'];
+  const colors = ['var(--red)','var(--red)','var(--yellow)','var(--green)','var(--green)','var(--green)'];
+  const verdict = labels[Math.min(score, 5)];
+  const vcolor  = colors[Math.min(score, 5)];
+
+  const recommendation = score >= 3
+    ? 'Mainnet icin dikkatli deneme yapilabilir. Ilk hafta %10 sermaye ile bayin.'
+    : 'Parametreleri optimize edip tekrar test edin. Mainnet icin hazir degil.';
+
+  document.getElementById('btVerdict').style.display = 'block';
+  document.getElementById('btVerdict').style.background = score >= 3 ? 'rgba(0,255,157,0.05)' : 'rgba(255,59,92,0.05)';
+  document.getElementById('btVerdict').style.border = '1px solid ' + vcolor;
+  document.getElementById('btVerdict').innerHTML =
+    '<div style="font-size:14px;font-weight:700;color:' + vcolor + ';margin-bottom:6px;">' +
+    verdict + ' (' + score + '/5)</div>' +
+    notes.map(n => '<div style="color:var(--text2);">' + n + '</div>').join('') +
+    '<div style="margin-top:6px;color:var(--text3);">' + recommendation + '</div>';
+
+  // Equity chart
+  document.getElementById('btEquityEmpty').style.display = 'none';
+  drawBtEquityChart(r.equity_curve, r.initial_capital);
+
+  // Monthly
+  renderBtMonthly(r.monthly);
+
+  // Trades table
+  renderBtTrades(r.trades);
+}
+
+function drawBtEquityChart(eqData, initialCapital) {
+  const canvas = document.getElementById('btEquityChart');
+  if (!canvas || !eqData || !eqData.length) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 600, H = 200;
+  canvas.width = W; canvas.height = H;
+
+  const values = eqData.map(p => p.v);
+  const minV = Math.min(...values, initialCapital * 0.85);
+  const maxV = Math.max(...values, initialCapital * 1.15);
+  const range = maxV - minV || 1;
+
+  ctx.clearRect(0, 0, W, H);
+  ctx.strokeStyle = 'rgba(30,45,61,0.8)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = H * 0.05 + H * 0.9 * i / 4;
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // Initial capital line
+  const baseY = H * 0.95 - ((initialCapital - minV) / range) * H * 0.9;
+  ctx.strokeStyle = 'rgba(107,130,153,0.4)';
+  ctx.setLineDash([4,4]);
+  ctx.beginPath(); ctx.moveTo(0, baseY); ctx.lineTo(W, baseY); ctx.stroke();
+  ctx.setLineDash([]);
+
+  const pts = eqData.map((p, i) => ({
+    x: W * i / (eqData.length - 1 || 1),
+    y: H * 0.95 - ((p.v - minV) / range) * H * 0.9,
+  }));
+
+  const isUp = values[values.length-1] >= initialCapital;
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, isUp ? 'rgba(0,255,157,0.25)' : 'rgba(255,59,92,0.25)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, H);
+  pts.forEach(pt => ctx.lineTo(pt.x, pt.y));
+  ctx.lineTo(pts[pts.length-1].x, H);
+  ctx.fillStyle = grad; ctx.fill();
+
+  ctx.beginPath();
+  pts.forEach((pt, i) => {
+    if (i === 0) ctx.moveTo(pt.x, pt.y);
+    else {
+      const prev = pts[i-1];
+      const cx = (prev.x + pt.x) / 2;
+      ctx.bezierCurveTo(cx, prev.y, cx, pt.y, pt.x, pt.y);
+    }
+  });
+  ctx.strokeStyle = isUp ? 'var(--green)' : 'var(--red)';
+  ctx.lineWidth = 2;
+  ctx.shadowColor = isUp ? 'var(--green)' : 'var(--red)';
+  ctx.shadowBlur = 8;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  const last = pts[pts.length-1];
+  ctx.fillStyle = isUp ? 'var(--green)' : 'var(--red)';
+  ctx.font = 'bold 11px Syne,sans-serif';
+  ctx.fillText(values[values.length-1].toFixed(2) + ' USDT', Math.max(4, last.x - 70), Math.max(16, last.y - 8));
+}
+
+function renderBtMonthly(monthly) {
+  if (!monthly || !monthly.length) return;
+  const el = document.getElementById('btMonthly');
+  const maxAbs = Math.max(...monthly.map(m => Math.abs(m.pct)), 1);
+  el.innerHTML = monthly.map(m => {
+    const isPos = m.pnl >= 0;
+    const barW = Math.abs(m.pct) / maxAbs * 100;
+    return '<div style="padding:6px 0;border-bottom:1px solid var(--border);">' +
+      '<div style="display:flex;justify-content:space-between;margin-bottom:3px;">' +
+      '<span style="font-size:11px;color:var(--text);">' + m.month + '</span>' +
+      '<span style="font-size:11px;color:' + (isPos?'var(--green)':'var(--red)') + ';">' +
+      (isPos?'+':'') + m.pnl.toFixed(2) + ' USDT (' + (isPos?'+':'') + m.pct.toFixed(1) + '%) | ' + m.trades + ' islem</span>' +
+      '</div>' +
+      '<div class="progress-bar" style="margin-top:0;">' +
+      '<div style="width:' + barW + '%;height:4px;background:' + (isPos?'var(--green)':'var(--red)') + ';border-radius:2px;transition:width 0.5s;"></div>' +
+      '</div></div>';
+  }).join('');
+}
+
+function renderBtTrades(trades) {
+  if (!trades || !trades.length) return;
+  document.getElementById('btTradesBody').innerHTML = trades.map(t => {
+    const isWin = t.is_win;
+    const exitColor = t.exit_reason==='take_profit'?'tp': t.exit_reason==='early_exit_signal'?'early':'sl';
+    const exitLabel = t.exit_reason==='take_profit'?'TP': t.exit_reason==='early_exit_signal'?'ERKEN':'SL';
+    return '<tr class="' + (isWin?'win':'loss') + '">' +
+      '<td style="font-size:9px;">' + t.ts_open + '</td>' +
+      '<td style="font-size:9px;">' + t.ts_close + '</td>' +
+      '<td><span class="badge badge-' + (t.side==='long'?'long':'short') + '">' + t.side.toUpperCase() + '</span></td>' +
+      '<td>' + (t.entry||0).toLocaleString() + '</td>' +
+      '<td style="color:var(--red);font-size:10px;">' + (t.sl||0).toLocaleString() + '</td>' +
+      '<td style="color:var(--green);font-size:10px;">' + (t.tp||0).toLocaleString() + '</td>' +
+      '<td>' + (t.exit||0).toLocaleString() + '</td>' +
+      '<td class="' + (isWin?'pnl-pos':'pnl-neg') + '">' + (isWin?'+':'') + (t.pnl_usdt||0).toFixed(4) + '</td>' +
+      '<td class="' + (isWin?'pnl-pos':'pnl-neg') + '">' + (isWin?'+':'') + (t.pnl_pct||0).toFixed(2) + '%</td>' +
+      '<td><span class="badge badge-' + exitColor + '">' + exitLabel + '</span></td>' +
+      '<td style="font-size:10px;color:var(--yellow);">' + (t.long_score||0) + 'L/' + (t.short_score||0) + 'S</td>' +
+      '</tr>';
+  }).join('');
+}
+
+</script>
+</body>
+</html>

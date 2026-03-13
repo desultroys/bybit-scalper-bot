@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(start \"HİBRİT - combined_signal\" cmd /k \"python -u combined_signal.py --interval 15 --symbol BTC-USDT --tf 15m\")"
+    ]
+  }
+}
